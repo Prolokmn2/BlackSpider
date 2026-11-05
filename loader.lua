@@ -18,7 +18,7 @@ local RAW      = "https://raw.githubusercontent.com/" .. REPO .. "/" .. BRANCH .
 
 -- order matters: every module only uses modules loaded before it
 local MODULES = { "util", "config", "lexer", "parser", "state", "netguard", "compiler", "emulator",
-    "env", "fetcher", "spider", "guesser", "report", "main" }
+    "env", "fetcher", "spider", "guesser", "splitter", "report", "main" }
 local ALIAS = { netguard = "net", compiler = "compiler", main = "main" }   -- BS.<alias or name>
 
 local compile = loadstring or load

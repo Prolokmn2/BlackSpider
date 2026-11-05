@@ -10,7 +10,20 @@ It never runs the target with the host's compiler: it parses the script with its
 * **Spider mode** – follows `loadstring(game:HttpGet(url))()` chains and analyses every script it finds.
 * **Emulator mode** – fires the callbacks a script registers (`:Connect`, `.OnClientEvent = f` ...).
 
-## Use (executor)
+## Easiest way: `settings.lua`
+
+Open [`settings.lua`](settings.lua), change the values at the top (`file`, `link`, `splitter`, `spider`, ...) and run it.
+Desktop: `lua settings.lua` (or override on the command line: `lua settings.lua file=big.lua splitter=true`).
+Executor: paste the file / put it in the workspace and execute.
+
+## Splitter mode (`splitter = true`)
+
+Static, nothing is executed. Parses the script with BlackSpider's own parser and prints it again: one statement
+per line, indented blocks, long tables / argument lists wrapped (`split_wrap`), `0X2e` / `0b1__0` -> decimal,
+constant maths calculated (`split_math`), constant-condition branches removed (`split_dead`). Output: `split.lua`.
+It is the right first step for Luraph / one-line walls; run the normal mode afterwards to see what the script *does*.
+
+## Use (executor, config table)
 
 ```lua
 getgenv().BlackSpiderConfig = {

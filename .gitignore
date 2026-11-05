@@ -1,0 +1,5 @@
+BlackSpider_out/
+BlackSpider_out_*
+tests/out_*
+output.txt
+*.luac
