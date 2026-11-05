@@ -491,7 +491,8 @@ return function(BS)
         return ("%.14g"):format(v)
     end
 
-    local function emit(s) buf[#buf + 1] = string.rep("    ", ind) .. s end
+    local function tab(n) return string.rep(string.rep(" ", C.SPLIT_INDENT or 4), n) end
+    local function emit(s) buf[#buf + 1] = tab(ind) .. s end
     local pe, stmts, stmt
 
     local function binprec(n)
@@ -511,7 +512,13 @@ return function(BS)
     local function args_str(args)
         local t = {}
         for i, a in ipairs(args) do t[i] = pe(a) end
-        return table.concat(t, ", ")
+        local one = table.concat(t, ", ")
+        local maxl = C.SPLIT_MAX_LINE or 0
+        if maxl > 0 and #t > 1 and #one > maxl and not one:find("\n") then
+            local pad = tab(ind + 1)
+            return "\n" .. pad .. table.concat(t, ",\n" .. pad) .. "\n" .. tab(ind)
+        end
+        return one
     end
 
     local function params_of(e, skipself)
@@ -557,7 +564,7 @@ return function(BS)
             local ps = params_of(e, false)
             local body = body_text(e)
             if body == "" then return "function(" .. ps .. ") end" end
-            return "function(" .. ps .. ")\n" .. body .. "\n" .. string.rep("    ", ind) .. "end"
+            return "function(" .. ps .. ")\n" .. body .. "\n" .. tab(ind) .. "end"
         elseif k == "un" then
             local s = pe(e.a)
             if binprec(e.a) < 7 then s = "(" .. s .. ")" end
@@ -588,9 +595,10 @@ return function(BS)
             end
             ind = ind - 1
             local one = table.concat(parts, ", ")
-            if #one <= 80 and not one:find("\n") then return "{" .. one .. "}" end
-            local pad = string.rep("    ", ind + 1)
-            return "{\n" .. pad .. table.concat(parts, ",\n" .. pad) .. "\n" .. string.rep("    ", ind) .. "}"
+            local maxl = C.SPLIT_MAX_LINE or 80
+            if maxl == 0 or (#one <= maxl and not one:find("\n")) then return "{" .. one .. "}" end
+            local pad = tab(ind + 1)
+            return "{\n" .. pad .. table.concat(parts, ",\n" .. pad) .. "\n" .. tab(ind) .. "}"
         end
         return "--[[?" .. tostring(k) .. "]]"
     end
@@ -721,6 +729,7 @@ return function(BS)
     function G.clean(ast, label)
         STATS = { folded = 0, renamed = 0, dead = 0, inlined = 0, decoded = 0 }
         FOLD, INLINE, DEAD, RENAME = C.CLEAN_FOLD, C.CLEAN_INLINE, C.CLEAN_DEAD, C.CLEAN_RENAME
+        if C.SPLITTER then FOLD, INLINE, DEAD, RENAME = C.SPLIT_FOLD_MATH, C.SPLIT_INLINE, C.SPLIT_DEAD, C.SPLIT_RENAME end
         local st = { decls = {}, globals = {} }
         analyze_ast(ast, st)
         used, counters = {}, { var = 0, arg = 0, fn = 0, loop = 0 }

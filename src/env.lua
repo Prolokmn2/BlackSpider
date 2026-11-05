@@ -112,6 +112,63 @@ return function(BS)
         return b
     end
 
+
+    -- ============================================================ Luau shims (Luraph / Luau VMs need these)
+    local function mk_buffer()
+        local B = {}
+        local function new(n) return { __buf = true, n = n, d = {} } end
+        local function chk(b, off, sz)
+            if type(b) ~= "table" or not b.__buf then error("invalid argument #1 (buffer expected)", 3) end
+            if off < 0 or off + sz > b.n then error("buffer access out of bounds", 3) end
+        end
+        local function rd(b, off, sz)               -- little endian unsigned
+            chk(b, off, sz)
+            local v, m = 0, 1
+            for i = 0, sz - 1 do v = v + (b.d[off + i] or 0) * m; m = m * 256 end
+            return floor(v)
+        end
+        local function wr(b, off, sz, v)
+            chk(b, off, sz)
+            v = floor(v) % (256 ^ sz)
+            for i = 0, sz - 1 do b.d[off + i] = v % 256; v = floor(v / 256) end
+        end
+        local function sgn(v, bits) if v >= 2 ^ (bits - 1) then v = v - 2 ^ bits end return floor(v) end
+        B.create = function(n) return new(n) end
+        B.len = function(b) return b.n end
+        B.fromstring = function(str)
+            local b = new(#str)
+            for i = 1, #str do b.d[i - 1] = str:byte(i) end
+            return b
+        end
+        B.tostring = function(b)
+            local t = {}
+            for i = 0, b.n - 1 do t[#t + 1] = string.char(b.d[i] or 0) end
+            return table.concat(t)
+        end
+        B.readu8  = function(b, o) return rd(b, o, 1) end
+        B.readi8  = function(b, o) return sgn(rd(b, o, 1), 8) end
+        B.readu16 = function(b, o) return rd(b, o, 2) end
+        B.readi16 = function(b, o) return sgn(rd(b, o, 2), 16) end
+        B.readu32 = function(b, o) return rd(b, o, 4) end
+        B.readi32 = function(b, o) return sgn(rd(b, o, 4), 32) end
+        B.readf32 = function(b, o) chk(b, o, 4); return (string.unpack("<f", B.tostring(b):sub(o + 1, o + 4))) end
+        B.readf64 = function(b, o) chk(b, o, 8); return (string.unpack("<d", B.tostring(b):sub(o + 1, o + 8))) end
+        B.writeu8  = function(b, o, v) wr(b, o, 1, v) end
+        B.writei8  = B.writeu8
+        B.writeu16 = function(b, o, v) wr(b, o, 2, v) end
+        B.writei16 = B.writeu16
+        B.writeu32 = function(b, o, v) wr(b, o, 4, v) end
+        B.writei32 = B.writeu32
+        B.writef32 = function(b, o, v) local s = string.pack("<f", v); for i = 1, 4 do b.d[o + i - 1] = s:byte(i) end end
+        B.writef64 = function(b, o, v) local s = string.pack("<d", v); for i = 1, 8 do b.d[o + i - 1] = s:byte(i) end end
+        B.readstring = function(b, o, n) local t = {}; for i = 0, n - 1 do t[#t + 1] = string.char(rd(b, o + i, 1)) end return table.concat(t) end
+        B.writestring = function(b, o, str, n) n = n or #str; for i = 1, n do wr(b, o + i - 1, 1, str:byte(i)) end end
+        B.copy = function(dst, doff, src, soff, n) n = n or (src.n - (soff or 0)); soff = soff or 0
+            for i = 0, n - 1 do dst.d[doff + i] = src.d[soff + i] or 0 end end
+        B.fill = function(b, o, v, n) n = n or (b.n - o); for i = 0, n - 1 do b.d[o + i] = v % 256 end end
+        return B
+    end
+
     -- host globals are referenced directly, NOT through _G (in Roblox executors _G is a separate empty table)
     local HOST = {
         assert = assert, error = error, ipairs = ipairs, pairs = pairs, next = next, pcall = pcall, xpcall = xpcall,
@@ -132,6 +189,14 @@ return function(BS)
         if env.string then env.string.dump = nil end
         env.table.unpack = env.table.unpack or U.unpack
         env.table.getn = env.table.getn or function(t) return #t end
+        env.table.create = env.table.create or function(n, v) local t = {}; if v ~= nil then for i = 1, (n or 0) do t[i] = v end end return t end
+        env.table.find = env.table.find or function(t, x, init) for i = init or 1, #t do if t[i] == x then return i end end end
+        env.table.clear = env.table.clear or function(t) for k in pairs(t) do t[k] = nil end end
+        env.table.clone = env.table.clone or function(t) local c = {}; for k, v in pairs(t) do c[k] = v end return c end
+        env.table.freeze = env.table.freeze or function(t) return t end
+        env.table.isfrozen = env.table.isfrozen or function() return false end
+        env.buffer = mk_buffer()
+        env.string.pack = env.string.pack or nil
         env.table.pack = env.table.pack or U.pack
         env.math.pow = env.math.pow or function(a, b) return a ^ b end
         env.bit32 = (type(bit32) == "table") and clone(bit32) or mk_bit32()

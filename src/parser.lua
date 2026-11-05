@@ -321,8 +321,9 @@ return function(BS)
                     p = p + 1
                     return { k = "break", line = ln }
                 end
-            elseif t == "name" and v == "continue" and T[p + 1] == "kw"
-                and (V[p + 1] == "end" or V[p + 1] == "else" or V[p + 1] == "elseif" or V[p + 1] == "until") then
+            elseif t == "name" and v == "continue" and ((T[p + 1] == "kw"
+                and (V[p + 1] == "end" or V[p + 1] == "else" or V[p + 1] == "elseif" or V[p + 1] == "until"))
+                or (T[p + 1] == "op" and V[p + 1] == ";")) then
                 p = p + 1
                 return { k = "continue", line = ln }
             elseif t == "name" and (v == "type" or v == "export") then

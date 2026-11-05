@@ -47,6 +47,19 @@ return function(BS)
         -- with SPIDER = false: still follow ONE get, so a pasted  loadstring(game:HttpGet(url))()  works
         FOLLOW_LOADER = true,
 
+        -- ===================================================== SPLITTER MODE (static, nothing is executed)
+        -- Turns a 1-line / huge obfuscated file into readable multi-line code: one statement per line,
+        -- indented blocks, long tables / argument lists wrapped, hex/binary numbers -> decimal.
+        SPLITTER         = false,   -- true = ONLY split (no sandbox run). Great for Luraph / 1-liner walls
+        SPLIT_OUT        = "split.lua",
+        SPLIT_FOLD_MATH  = true,    -- calculate constant maths: 0X2e+5, 4503599627370495*0, bit32.bxor(1,2) ...
+        SPLIT_RENAME     = false,   -- also rename obfuscated variable names (needs the usage heuristics)
+        SPLIT_INLINE     = false,   -- inline single-assignment literal locals (shorter, but hides the names)
+        SPLIT_DEAD       = true,    -- drop branches whose condition is a constant  (if 1==2 then ... end)
+        SPLIT_MAX_LINE   = 100,     -- wrap tables / call arguments longer than this (0 = never wrap)
+        SPLIT_INDENT     = 4,       -- spaces per level
+        SPLIT_THEN_RUN   = false,   -- after splitting, ALSO run the normal sandbox analysis
+
         -- ===================================================== CODE GUESSER (deobfuscator)
         CLEAN_FOLD   = true,     -- constant folding (string.char, "a".."b", math, bit32 ...)
         CLEAN_RENAME = true,     -- give obfuscated names readable ones

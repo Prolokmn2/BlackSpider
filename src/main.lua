@@ -64,6 +64,10 @@ return function(BS)
             if not ok or type(src) ~= "string" then print("[-] cannot read " .. C.TARGET_FILE); return end
             code = src
         end
+        if C.SPLITTER then
+            BS.splitter.run(code)
+            if not C.SPLIT_THEN_RUN then return end
+        end
         print(("[*] spider: %s"):format(C.SPIDER and ("ON (depth %d, max %d pages)"):format(C.SPIDER_MAX_DEPTH, C.SPIDER_MAX_PAGES)
             or (C.FOLLOW_LOADER and "off (follows one loader GET)" or "off")))
         BS.spider.crawl(code, { url = url })
